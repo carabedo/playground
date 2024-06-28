@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .node {
+            width: 60px;  /* doubled from 30px */
+            height: 60px;  /* doubled from 30px */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: absolute;
+        }
+        .input-box {
+            width: 50px;
+            height: 30px;
+            position: absolute;
+            margin-right: 0px; /* position input box to the left of node */
+        }
+        .edge {
+            position: absolute;
+            height: 2px;  /* doubled from 1px */
+            background: black;
+            transform-origin: 0 50%;
+        }
+        .container {
+            position: relative;
+            height: 400px;  /* doubled from 200px */
+            width: 1000px;  /* doubled from 500px */
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Input Boxes -->
+   
+        
+        <!-- Nodes -->
+
+
+        <input id="input1" class="input-box" type="number" value="0" style="top: 115px; left: -20px;">
+        <div id="node1" class="node" style="background: gray; top: 100px; left: 40px;">x1</div>
+        <div id="node3" class="node" style="background: pink; top: 100px; left: 280px;">n1</div>
+
+
+
+        <input id="input3" class="input-box" type="number" value="0" style="top: 315px; left: -20px;">
+        <div id="node2" class="node" style="background: gray; top: 300px; left: 40px;">x2</div>
+        <div id="node4" class="node" style="background: cyan; top: 300px; left: 280px;">n2</div>
+
+
+
+
+        <div id="node5" class="node" style="background: orange; top: 200px; left: 610px;">O</div>
+        
+        <!-- Edges -->
+        <div id="edge1" class="edge" style="top: 130px; left: 100px; width: 180px; transform: rotate(0deg);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w11</div>
+        <div id="edge2" class="edge" style="top: 330px; left: 100px; width: 180px; transform: rotate(0deg);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w22</div>
+        <div id="edge3" class="edge" style="top: 130px; left: 100px; width: 260px; transform: rotate(45deg);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w12</div>
+        <div id="edge4" class="edge" style="top: 330px; left: 100px; width: 260px; transform: rotate(-45deg);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w21</div>
+        <div id="edge5" class="edge" style="top: 130px; left: 340px; width: 290px; transform: rotate(20deg);"></div>
+        <div id="edge6" class="edge" style="top: 330px; left: 340px; width: 290px; transform: rotate(-20deg);"></div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.querySelectorAll('.input-box').forEach(input => {
+            let startY;
+            let startValue;
+
+            input.addEventListener('mousedown', (event) => {
+                startY = event.clientY;
+                startValue = parseFloat(input.value);
+                document.addEventListener('mousemove', mouseMove);
+                document.addEventListener('mouseup', mouseUp);
+            });
+
+            function mouseMove(event) {
+                const dy = startY - event.clientY;
+                input.value = startValue + dy;
+            }
+
+            function mouseUp() {
+                document.removeEventListener('mousemove', mouseMove);
+                document.removeEventListener('mouseup', mouseUp);
+            }
+        });
+    </script>
+</body>
+</html>

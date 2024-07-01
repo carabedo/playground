@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Function Plot with Minima</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>3D Function Plot with Minima</h1>
+    <div id="plot"></div>
+    <div class="input-group">
+        <label for="x">X Coordinate:</label>
+        <input type="number" id="x" step="0.1">
+    </div>
+    <div class="input-group">
+        <label for="y">Y Coordinate:</label>
+        <input type="number" id="y" step="0.1">
+    </div>
+    <button onclick="plotPointAndGradient()">Plot Point and Gradient</button>
+    <script>
+        // Define the function f(x, y)
+        function f(x, y) {
+            return Math.pow(x - 1, 2) + Math.pow(y - 1, 2) + Math.sin(5 * (x + y));
+        }
+
+        // Define the gradient of the function
+        function gradient(x, y) {
+            const dfdx = 2 * (x - 1) + 5 * Math.cos(5 * (x + y));
+            const dfdy = 2 * (y - 1) + 5 * Math.cos(5 * (x + y));
+            return [dfdx, dfdy];
+        }
+
+        // Generate data for the surface plot
+        const x = [];
+        const y = [];
+        const z = [];
+        for (let i = -2; i <= 4; i += 0.1) {
+            const rowX = [];
+            const rowY = [];
+            const rowZ = [];
+            for (let j = -2; j <= 4; j += 0.1) {
+                rowX.push(i);
+                rowY.push(j);
+                rowZ.push(f(i, j));
+            }
+            x.push(rowX);
+            y.push(rowY);
+            z.push(rowZ);
+        }
+
+        // Plot the surface
+        Plotly.newPlot('plot', [{
+            type: 'surface',
+            x: x,
+            y: y,
+            z: z
+        }]);
+
+        // Function to plot the point and gradient
+        function plotPointAndGradient() {
+            const xCoord = parseFloat(document.getElementById('x').value);
+            const yCoord = parseFloat(document.getElementById('y').value);
+            const [gradX, gradY] = gradient(xCoord, yCoord);
+
+            // Add the point
+            Plotly.addTraces('plot', {
+                type: 'scatter3d',
+                mode: 'markers',
+                marker: { size: 5, color: 'red' },
+                x: [xCoord],
+                y: [yCoord],
+                z: [f(xCoord, yCoord)]
+            });
+
+            // Add the gradient vector
+            Plotly.addTraces('plot', {
+                type: 'scatter3d',
+                mode: 'lines',
+                line: { width: 5, color: 'blue' },
+                x: [xCoord, xCoord - gradX],
+                y: [yCoord, yCoord - gradY],
+                z: [f(xCoord, yCoord), f(xCoord, yCoord) - 1] // Adjust z for better visualization
+            });
+        }
+    </script>
+</body>
+</html>

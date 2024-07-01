@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression with Gradient Descent</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .plots {
+            display: grid;
+            grid-template-columns: 50% 50%;
+            grid-template-rows: 50% 50%;
+            width: 100%;
+            height: 100vh; /* Full viewport height */
+            overflow: hidden; /* Hide overflow for full-page layout */
+        }
+        .controls {
+            width: 30%;
+            text-align: center;
+            margin: 20px;
+        }
+
+        .plot {
+            width: 90%;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="plots">
+            <div id="scatterPlot" class="plot"></div>
+            <div id="costPlot" class="plot"></div>
+            <div class="controls">
+                <label for="iterations">Number of Iterations:</label>
+                <input type="number" id="iterations" value="10">
+                <br>
+                <label for="learningRate">Learning Rate:</label>
+                <input type="number" id="learningRate" step="any" value="0.001">
+                <br>
+                <label for="theta0">Initial Theta0:</label>
+                <input type="number" id="theta0" step="any">
+                <br>
+                <label for="theta1">Initial Theta1:</label>
+                <input type="number" id="theta1" step="any">
+                <br>
+                <button onclick="startGradientDescent()">Start</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const x = [12.2, 14.4, 15.0, 16.7, 17.8, 18.3, 19.4, 22.2, 22.8, 23.9, 25.0, 26.7];
+        const y = [125, 175, 325, 275, 425, 400, 450, 425, 450, 525, 550, 625];
+        
+        let theta = [Math.random(), Math.random()];
+        let learningRate = 0.001;
+
+        function computeCost(X, y, theta) {
+            const m = y.length;
+            const predictions = X.map(row => theta[0] + theta[1] * row);
+            const sqErrors = predictions.map((pred, i) => Math.pow(pred - y[i], 2));
+            return (1 / (2 * m)) * sqErrors.reduce((a, b) => a + b, 0);
+        }
+
+        function gradientDescentStep(X, y, theta, learningRate) {
+            const m = y.length;
+            const predictions = X.map(row => theta[0] + theta[1] * row);
+            const errors = predictions.map((pred, i) => pred - y[i]);
+
+            theta[0] -= learningRate * (1 / m) * errors.reduce((a, b) => a + b, 0);
+            theta[1] -= learningRate * (1 / m) * errors.reduce((sum, error, i) => sum + error * X[i], 0);
+
+            return theta;
+        }
+
+        function startGradientDescent() {
+            const iterations = document.getElementById('iterations').value;
+            learningRate = parseFloat(document.getElementById('learningRate').value) || 0.001;
+            const initialTheta0 = parseFloat(document.getElementById('theta0').value) || Math.random();
+            const initialTheta1 = parseFloat(document.getElementById('theta1').value) || Math.random();
+            
+            theta = [initialTheta0, initialTheta1];
+            const costHistory = [];
+            const thetaHistory = [];
+            
+            function step(i) {
+                if (i >= iterations) return;
+
+                theta = gradientDescentStep(x, y, theta, learningRate);
+                const cost = computeCost(x, y, theta);
+                costHistory.push(cost);
+                thetaHistory.push([...theta]);
+
+                plotData();
+                plotCost(thetaHistory, costHistory);
+
+                setTimeout(() => step(i + 1), 1000);
+            }
+            
+            step(0);
+        }
+
+        function plotData() {
+            const trace1 = {
+                x: x,
+                y: y,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Data Points'
+            };
+            
+            const lineY = x.map(val => theta[0] + theta[1] * val);
+            const trace2 = {
+                x: x,
+                y: lineY,
+                mode: 'lines',
+                type: 'scatter',
+                name: `Fit: y = ${theta[0].toFixed(2)} + ${theta[1].toFixed(2)}x`
+            };
+            
+            const data = [trace1, trace2];
+            const layout = {
+                width: 800,
+                height: 300,
+                margin: { l: 0, r: 0, b: 0, t: 0 }
+            };
+            Plotly.newPlot('scatterPlot', data, layout);
+        }
+
+        function plotCost(thetaHistory, costHistory) {
+            const trace = {
+                x: thetaHistory.map(theta => theta[0]),
+                y: thetaHistory.map(theta => theta[1]),
+                z: costHistory,
+                mode: 'markers',
+                marker: {
+                    size: 5,
+                    color: costHistory,
+                    colorscale: 'Viridis'
+                },
+                type: 'scatter3d'
+            };
+            
+            const data = [trace];
+            const layout = {
+                width: 800,
+                height: 400,
+                margin: { l: 0, r: 0, b: 0, t: 0 },
+                scene: {
+                    xaxis: { title: 'Theta0' },
+                    yaxis: { title: 'Theta1' },
+                    zaxis: { title: 'Cost' }
+                }
+            };
+            Plotly.newPlot('costPlot', data, layout);
+        }
+
+        plotData();
+    </script>
+</body>
+</html>

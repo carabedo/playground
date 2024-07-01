@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Step-by-Step Neural Network Training</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>Neural Network Parameters</h2>
+  <div>
+    <p>Weights between Input and Hidden Layer:</p>
+    <p>Weight 1: <span id="w1">0</span></p>
+    <p>Weight 2: <span id="w2">0</span></p>
+    <p>Weight 3: <span id="w3">0</span></p>
+    <p>Weight 4: <span id="w4">0</span></p>
+    <p>Weights between Hidden and Output Layer:</p>
+    <p>Weight 5: <span id="w5">0</span></p>
+    <p>Weight 6: <span id="w6">0</span></p>
+    <p>Biases for Hidden Layer:</p>
+    <p>Bias 1: <span id="b1">0</span></p>
+    <p>Bias 2: <span id="b2">0</span></p>
+    <p>Bias for Output Layer:</p>
+    <p>Bias 3: <span id="b3">0</span></p>
+  </div>
+  <div>
+    <label for="csv-url">CSV URL:</label>
+    <input type="text" id="csv-url">
+    <button onclick="loadCSV()">Load CSV</button>
+  </div>
+  <div>
+    <label for="epochs">Number of Epochs:</label>
+    <input type="number" id="epochs" value="1">
+    <label for="learning-rate">Learning Rate:</label>
+    <input type="number" id="learning-rate" value="0.5" step="0.01">
+  </div>
+  <button onclick="trainOneEpoch()">Train One Epoch</button>
+  <div>
+    <h3>Training Progress</h3>
+    <p>Current Accuracy: <span id="accuracy">0</span></p>
+    <canvas id="errorChart" width="400" height="200"></canvas>
+  </div>
+  <script>
+    // Sigmoid activation function
+    function sigmoid(x) {
+      return 1 / (1 + Math.exp(-x));
+    }
+
+    // Derivative of sigmoid function
+    function sigmoidDerivative(x) {
+      return x * (1 - x);
+    }
+
+    // Initialize weights and biases
+    let w1 = Math.random();
+    let w2 = Math.random();
+    let w3 = Math.random();
+    let w4 = Math.random();
+    let w5 = Math.random();
+    let w6 = Math.random();
+
+    let b1 = Math.random();
+    let b2 = Math.random();
+    let b3 = Math.random();
+
+    let trainingData = [];
+    let accuracies = [];
+    let epoch = 0;
+
+    // Set up the Chart.js chart for plotting errors
+    const ctx = document.getElementById('errorChart').getContext('2d');
+    const errorChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Accuracy',
+          data: [],
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+          fill: false
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Epoch'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Accuracy'
+            }
+          }
+        }
+      }
+    });
+
+    // Function to load and parse CSV data
+    async function loadCSV() {
+      const url = document.getElementById('csv-url').value;
+      try {
+        const response = await fetch(url);
+        const csvText = await response.text();
+        parseCSV(csvText);
+        console.log('CSV data loaded successfully!');
+      } catch (error) {
+        console.log('Failed to load CSV data. Please check the URL.');
+      }
+    }
+
+    // Function to parse CSV text into training data
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      trainingData = lines.slice(1).map(line => {
+        const [input1, input2, output] = line.split(',').map(Number);
+        return { input: [input1, input2], output: [output] };
+      });
+    }
+
+    function trainOneEpoch() {
+      if (trainingData.length === 0) {
+        alert('Please load the training data first.');
+        return;
+      }
+
+      const learningRate = parseFloat(document.getElementById('learning-rate').value);
+
+      let correctPredictions = 0;
+
+      trainingData.forEach(data => {
+        // Forward pass
+        const input1 = data.input[0];
+        const input2 = data.input[1];
+        
+        const hiddenLayerInput1 = input1 * w1 + input2 * w2 + b1;
+        const hiddenLayerInput2 = input1 * w3 + input2 * w4 + b2;
+        
+        const hiddenLayerOutput1 = sigmoid(hiddenLayerInput1);
+        const hiddenLayerOutput2 = sigmoid(hiddenLayerInput2);
+        
+        const finalInput = hiddenLayerOutput1 * w5 + hiddenLayerOutput2 * w6 + b3;
+        const finalOutput = sigmoid(finalInput);
+        
+        // Calculate error
+        const prediction = finalOutput >= 0.5 ? 1 : 0;
+        if (prediction === data.output[0]) {
+          correctPredictions += 1;
+        }
+        const error = data.output[0] - finalOutput;
+        
+        // Backpropagation
+        const dError_dOutput = error;
+        const dOutput_dInput = sigmoidDerivative(finalOutput);
+        
+        const deltaOutput = dError_dOutput * dOutput_dInput;
+        
+        const dHidden1_dInput = sigmoidDerivative(hiddenLayerOutput1);
+        const dHidden2_dInput = sigmoidDerivative(hiddenLayerOutput2);
+        
+        // Update weights and biases for hidden to output layer
+        w5 += learningRate * deltaOutput * hiddenLayerOutput1;
+        w6 += learningRate * deltaOutput * hiddenLayerOutput2;
+        b3 += learningRate * deltaOutput;
+
+        // Update weights and biases for input to hidden layer
+        w1 += learningRate * deltaOutput * w5 * dHidden1_dInput * input1;
+        w2 += learningRate * deltaOutput * w5 * dHidden1_dInput * input2;
+        w3 += learningRate * deltaOutput * w6 * dHidden2_dInput * input1;
+        w4 += learningRate * deltaOutput * w6 * dHidden2_dInput * input2;
+        b1 += learningRate * deltaOutput * w5 * dHidden1_dInput;
+        b2 += learningRate * deltaOutput * w6 * dHidden2_dInput;
+
+        // Update HTML elements with new weights and biases
+        document.getElementById('w1').textContent = w1.toFixed(4);
+        document.getElementById('w2').textContent = w2.toFixed(4);
+        document.getElementById('w3').textContent = w3.toFixed(4);
+        document.getElementById('w4').textContent = w4.toFixed(4);
+        document.getElementById('w5').textContent = w5.toFixed(4);
+        document.getElementById('w6').textContent = w6.toFixed(4);
+        document.getElementById('b1').textContent = b1.toFixed(4);
+        document.getElementById('b2').textContent = b2.toFixed(4);
+        document.getElementById('b3').textContent = b3.toFixed(4);
+      });
+
+      const accuracy = (correctPredictions / trainingData.length) * 100;
+      document.getElementById('accuracy').textContent = accuracy.toFixed(2) + '%';
+
+      // Update the accuracy chart
+      epoch++;
+      errorChart.data.labels.push(epoch);
+      errorChart.data.datasets[0].data.push(accuracy);
+      errorChart.update();
+    }
+  </script>
+</body>
+</html>

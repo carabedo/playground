@@ -27,15 +27,15 @@
     </div>
     <button onclick="plotPointAndGradient()">Plot Point and Gradient</button>
     <script>
-        // Define the function f(x, y)
+        // Define the function f(x, y) with global minimum, local minimum, and saddle point
         function f(x, y) {
-            return Math.pow(x - 1, 2) + Math.pow(y - 1, 2) + Math.sin(5 * (x + y));
+            return (x ** 4 - 4 * x ** 2 + x) + (y ** 4 - 4 * y ** 2 + y);
         }
 
         // Define the gradient of the function
         function gradient(x, y) {
-            const dfdx = 2 * (x - 1) + 5 * Math.cos(5 * (x + y));
-            const dfdy = 2 * (y - 1) + 5 * Math.cos(5 * (x + y));
+            const dfdx = 4 * x ** 3 - 8 * x + 1;
+            const dfdy = 4 * y ** 3 - 8 * y + 1;
             return [dfdx, dfdy];
         }
 
@@ -43,11 +43,11 @@
         const x = [];
         const y = [];
         const z = [];
-        for (let i = -2; i <= 4; i += 0.1) {
+        for (let i = -3; i <= 3; i += 0.1) {
             const rowX = [];
             const rowY = [];
             const rowZ = [];
-            for (let j = -2; j <= 4; j += 0.1) {
+            for (let j = -3; j <= 3; j += 0.1) {
                 rowX.push(i);
                 rowY.push(j);
                 rowZ.push(f(i, j));
@@ -57,13 +57,31 @@
             z.push(rowZ);
         }
 
-        // Plot the surface
+        // Plot the surface with a transparent mesh and more contour lines
         Plotly.newPlot('plot', [{
             type: 'surface',
             x: x,
             y: y,
-            z: z
-        }]);
+            z: z,
+            opacity: 0.7,
+            surfacecolor: z,
+            colorscale: 'Viridis',
+            showscale: false,
+            contours: {
+                x: { show: true, color: 'black', width: 2, highlightwidth: 10, start: -3, end: 3, size: 0.1 },
+                y: { show: true, color: 'black', width: 2, highlightwidth: 10, start: -3, end: 3, size: 0.1 },
+                z: { show: true, color: 'black', width: 2, highlightwidth: 10, start: -20, end: 20, size: 1 }
+            }
+        }], {
+            width: window.innerWidth,
+            height: 600,
+            margin: {
+                l: 0,
+                r: 0,
+                b: 0,
+                t: 0
+            }
+        });
 
         // Function to plot the point and gradient
         function plotPointAndGradient() {
@@ -86,8 +104,8 @@
                 type: 'scatter3d',
                 mode: 'lines',
                 line: { width: 5, color: 'blue' },
-                x: [xCoord, xCoord - gradX],
-                y: [yCoord, yCoord - gradY],
+                x: [xCoord, xCoord - gradX * 0.1],
+                y: [yCoord, yCoord - gradY * 0.1],
                 z: [f(xCoord, yCoord), f(xCoord, yCoord) - 1] // Adjust z for better visualization
             });
         }

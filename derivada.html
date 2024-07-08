@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Plot with Tangent Line using D3</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .plot {
+            width: 800px;
+            height: 400px;
+        }
+        #knob {
+            fill: lightgrey;
+            stroke: black;
+            cursor: pointer;
+        }
+        #slopeText {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainPlot" class="plot"></div>
+    <div id="slopePlot" class="plot"></div>
+    <script>
+        // Set up the main plot dimensions
+        const margin = {top: 20, right: 30, bottom: 40, left: 50};
+        const width = 800 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+
+        // Set up the scales
+        const xScale = d3.scaleLinear().domain([-2, 3]).range([0, width]);
+        const yScale = d3.scaleLinear().domain([-3, 3]).range([height, 0]);
+        const ySlopeScale = d3.scaleLinear().domain([-10, 10]).range([height, 0]);
+
+        // Create the SVG container for the main plot
+        const svgMain = d3.select("#mainPlot")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Define the function f(x) and its derivative df(x)
+        function f(x) {
+            return x * Math.sin(x ** 2) + 1;
+        }
+
+        function df(x) {
+            return Math.sin(x ** 2) + 2 * x ** 2 * Math.cos(x ** 2);
+        }
+
+        // Generate data points for the function plot
+        const data = d3.range(-2, 3.01, 0.01).map(x => ({x: x, y: f(x)}));
+
+        // Create the line generator
+        const line = d3.line()
+            .x(d => xScale(d.x))
+            .y(d => yScale(d.y));
+
+        // Add the function plot to the main SVG
+        svgMain.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line)
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 2);
+
+        // Add the x-axis to the main SVG
+        svgMain.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(xScale));
+
+        // Add the y-axis to the main SVG
+        svgMain.append("g")
+            .call(d3.axisLeft(yScale));
+
+        // Add the knob to the main SVG
+        const knob = svgMain.append("circle")
+            .attr("id", "knob")
+            .attr("r", 8)
+            .attr("cx", xScale(0))
+            .attr("cy", yScale(f(0)));
+
+        // Add the tangent line to the main SVG
+        const tangentLine = svgMain.append("line")
+            .attr("stroke", "red")
+            .attr("stroke-width", 2);
+
+        // Set up the slope plot dimensions
+        const svgSlope = d3.select("#slopePlot")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Initialize the slope data
+        const slopeData = [];
+
+        // Create the line generator for the slope plot
+        const slopeLine = d3.line()
+            .x(d => xScale(d.x))
+            .y(d => ySlopeScale(d.y));
+
+        // Add the slope plot line to the SVG
+        const slopePath = svgSlope.append("path")
+            .datum(slopeData)
+            .attr("class", "line")
+            .attr("fill", "none")
+            .attr("stroke", "orange")
+            .attr("stroke-width", 2);
+
+        // Add horizontal line at y=0 to the slope plot
+        svgSlope.append("line")
+            .attr("x1", 0)
+            .attr("y1", ySlopeScale(0))
+            .attr("x2", width)
+            .attr("y2", ySlopeScale(0))
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "5,5");
+
+        // Add the x-axis to the slope SVG
+        svgSlope.append("g")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(xScale));
+
+        // Add the y-axis to the slope SVG
+        svgSlope.append("g")
+            .call(d3.axisLeft(ySlopeScale));
+
+        // Function to update the plot based on the knob position
+        function updatePlot(x0) {
+            const y0 = f(x0);
+            const slope = df(x0);
+
+            // Update the knob position
+            knob.attr("cx", xScale(x0))
+                .attr("cy", yScale(y0));
+
+            // Update the tangent line
+            const xTangentStart = x0 - 0.5;
+            const xTangentEnd = x0 + 0.5;
+            const yTangentStart = y0 - slope * 0.5;
+            const yTangentEnd = y0 + slope * 0.5;
+
+            tangentLine
+                .attr("x1", xScale(xTangentStart))
+                .attr("y1", yScale(yTangentStart))
+                .attr("x2", xScale(xTangentEnd))
+                .attr("y2", yScale(yTangentEnd));
+
+            // Update the slope text
+            d3.select("#slopeText").text(`m=${slope.toFixed(2)}`);
+
+            // Add the new slope value to the slope data
+            slopeData.push({x: x0, y: slope});
+            slopeData.sort((a, b) => a.x - b.x);
+
+            // Update the slope plot line
+            slopePath.datum(slopeData)
+                .attr("d", slopeLine);
+        }
+
+        // Initial plot update
+        updatePlot(0);
+
+        // Add drag functionality to the knob
+        knob.call(d3.drag()
+            .on("drag", function (event) {
+                const x0 = Math.max(-2, Math.min(3, xScale.invert(event.x)));
+                updatePlot(x0);
+            })
+        );
+
+    </script>
+</body>
+</html>

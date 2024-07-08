@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Plot</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+        }
+        .plot {
+            width: 45%;
+        }
+        .knob-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+        }
+        .knob-wrapper {
+            text-align: center;
+        }
+        .knob {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin: 5px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="plot1" class="plot">
+
+
+            
+        </div>
+        <div id="plot2" class="plot"></div>
+    </div>
+    <div class="knob-container">
+        <div class="knob-wrapper">
+            <div class="knob" id="knob-m">20</div>
+            <label for="knob-m">m</label>
+        </div>
+        <div class="knob-wrapper">
+            <div class="knob" id="knob-b">0</div>
+            <label for="knob-b">b</label>
+        </div>
+
+        <div class="knob-wrapper">
+
+        </div>
+        <div class="knob-wrapper">
+
+        </div>
+        <div class="knob-wrapper">
+
+        </div>
+        <div class="knob-wrapper">
+
+        </div>
+    </div>
+    <script>
+        // Load data from CSV
+        d3.csv("https://raw.githubusercontent.com/carabedo/labs/master/data/freddo.csv").then(function(data) {
+            data.forEach(d => {
+                d.temp = +d.temp;
+                d.venta = +d.venta;
+            });
+
+            // Set up dimensions and margins
+            const margin = { top: 20, right: 20, bottom: 30, left: 50 },
+                  width = 500 - margin.left - margin.right,
+                  height = 400 - margin.top - margin.bottom;
+
+            // Set up scales
+            const x = d3.scaleLinear().domain(d3.extent(data, d => d.temp)).range([0, width]);
+            const y = d3.scaleLinear().domain(d3.extent(data, d => d.venta)).range([height, 0]);
+
+            // Create SVG containers
+            const svg1 = d3.select("#plot1").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const svg2 = d3.select("#plot2").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Add axes
+            svg1.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            svg1.append("g")
+                .call(d3.axisLeft(y));
+
+            // Plot the data points
+            svg1.selectAll("circle")
+                .data(data)
+                .enter().append("circle")
+                .attr("cx", d => x(d.temp))
+                .attr("cy", d => y(d.venta))
+                .attr("r", 3);
+
+            // Variables for line parameters
+            let m = 20;
+            let b = 0;
+            let changes = 0;
+            let rmseHistory = [];
+
+            // Function to update the line
+            function updateLine() {
+                changes++;
+                svg1.selectAll(".line").remove();
+                svg1.selectAll(".residual").remove();
+
+                const line = d3.line()
+                    .x(d => x(d.temp))
+                    .y(d => y(m * d.temp + b));
+
+                svg1.append("path")
+                    .datum(data)
+                    .attr("class", "line")
+                    .attr("d", line)
+                    .style("stroke", "blue")
+                    .style("stroke-width", 2)
+                    .style("fill", "none");
+
+                // Plot residuals
+                data.forEach(d => {
+                    svg1.append("line")
+                        .attr("class", "residual")
+                        .attr("x1", x(d.temp))
+                        .attr("y1", y(d.venta))
+                        .attr("x2", x(d.temp))
+                        .attr("y2", y(m * d.temp + b))
+                        .style("stroke", "red")
+                        .style("stroke-width", 1);
+                });
+
+                // Calculate RMSE
+                const rmse = Math.sqrt(data.reduce((sum, d) => sum + Math.pow(d.venta - (m * d.temp + b), 2), 0) / data.length);
+                rmseHistory.push({ change: changes, rmse: rmse });
+
+                // Update plot2
+                svg2.selectAll("*").remove();
+
+                const x2 = d3.scaleLinear().domain([0, changes]).range([0, width]);
+                const y2 = d3.scaleLinear().domain([0, d3.max(rmseHistory, d => d.rmse)]).range([height, 0]);
+
+                svg2.append("g")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x2));
+
+                svg2.append("g")
+                    .call(d3.axisLeft(y2));
+
+                const line2 = d3.line()
+                    .x(d => x2(d.change))
+                    .y(d => y2(d.rmse));
+
+                svg2.append("path")
+                    .datum(rmseHistory)
+                    .attr("class", "line-rmse")
+                    .attr("d", line2)
+                    .style("stroke", "green")
+                    .style("stroke-width", 2)
+                    .style("fill", "none");
+            }
+
+            // Add event listeners for knobs
+            d3.select("#knob-m").call(d3.drag()
+                .on("drag", function(event) {
+                    m += event.dy * 0.1;
+                    d3.select(this).text(m.toFixed(0));
+                    updateLine();
+                }));
+
+            d3.select("#knob-b").call(d3.drag()
+                .on("drag", function(event) {
+                    b += event.dy * 10;
+                    d3.select(this).text(b.toFixed(0));
+                    updateLine();
+                }));
+
+            // Initial plot
+            updateLine();
+        });
+    </script>
+</body>
+</html>

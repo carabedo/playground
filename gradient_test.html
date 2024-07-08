@@ -36,7 +36,8 @@
         function gradient(x, y) {
             const dfdx = 4 * x ** 3 - 8 * x + 1;
             const dfdy = 4 * y ** 3 - 8 * y + 1;
-            return [dfdx, dfdy];
+            const magnitude = Math.sqrt(dfdx ** 2 + dfdy ** 2);
+            return [dfdx / magnitude, dfdy / magnitude];
         }
 
         // Generate data for the surface plot
@@ -104,9 +105,9 @@
                 type: 'scatter3d',
                 mode: 'lines',
                 line: { width: 5, color: 'blue' },
-                x: [xCoord, xCoord - gradX * 0.1],
-                y: [yCoord, yCoord - gradY * 0.1],
-                z: [f(xCoord, yCoord), f(xCoord, yCoord) - 1] // Adjust z for better visualization
+                x: [xCoord, xCoord + gradX * 0.1],
+                y: [yCoord, yCoord + gradY * 0.1],
+                z: [f(xCoord, yCoord), f(xCoord + gradX * 0.1, yCoord + gradY * 0.1)] // Adjust z for better visualization
             });
         }
     </script>

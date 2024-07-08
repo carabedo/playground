@@ -78,6 +78,14 @@
         svgMain.append("g")
             .call(d3.axisLeft(yScale));
 
+        svgMain.append("text")
+            .attr("x", width / 2)
+            .attr("y", margin.top/2)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "25px")
+            .text("f = x.sin(x^2) + 1");
+
+
         // Add the knob to the main SVG
         const knob = svgMain.append("circle")
             .attr("id", "knob")
@@ -132,6 +140,14 @@
         // Add the y-axis to the slope SVG
         svgSlope.append("g")
             .call(d3.axisLeft(ySlopeScale));
+
+
+            svgSlope.append("text")
+            .attr("x", width / 2)
+            .attr("y", margin.top / 2)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "25px")
+            .text("df/dx  = sin(x^2) + 2.x^2.cos(x^2)");
 
         // Function to update the plot based on the knob position
         function updatePlot(x0) {

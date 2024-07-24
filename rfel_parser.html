@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Parser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #inputBox {
+            width: 60%;
+            height: 200px;
+            box-sizing: border-box;
+            padding: 10px;
+            font-size: 16px;
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #parseButton {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .codeblock {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap; /* Preserve whitespace */
+        }
+        .line {
+            margin-top: 20px; /* Increased space between lines */
+        }
+        .title {
+            font-weight: bold;
+            font-size: 40px; /* Increased font size for title number */
+
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Text Parser</h1>
+    <textarea id="inputBox" placeholder="Paste your text here..."></textarea>
+    <button id="parseButton">Parse Text</button>
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('parseButton').addEventListener('click', function() {
+            const inputText = document.getElementById('inputBox').value;
+            const lines = inputText.split('\n');
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = ''; // Clear previous output
+
+            lines.forEach(line => {
+                const match = line.match(/^(\d+):\s*(.*)\s*->\s*(.*)$/);
+                if (match) {
+                    const title = match[1];
+                    const funcInput = match[2];
+                    const output = match[3];
+
+                    const codeblockHTML = `<div class='line'><div class="title">${title}</div>
+                        <div class="codeblock"><div>#${title}\n${funcInput}</div></div>
+                        <div class="codeblock"><div>${output}</div></div></div>`;
+                    outputDiv.innerHTML += codeblockHTML;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

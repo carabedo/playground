@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Definition Parser</title>
+    <!-- Okaidia Theme for Prism.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/themes/prism-okaidia.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        #textInput {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .collapsible {
+            background-color: #007acc;
+            color: #fff;
+            cursor: pointer;
+            padding: 12px;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 18px;
+            margin-top: 10px;
+            width: 100%;
+            border-radius: 4px;
+        }
+        .content {
+            display: none;
+            padding: 10px;
+            background-color: #272822;
+            overflow: auto;
+            white-space: pre-wrap;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+            border-radius: 4px;
+        }
+        pre[class*="language-"] {
+            background: #272822 !important;
+            color: #f8f8f2;
+            font-size: 14px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/components/prism-python.min.js"></script>
+</head>
+<body>
+    <h2>Function Definition Parser</h2>
+    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+    <button onclick="parseText()">Parse Functions</button>
+
+    <div id="output"></div>
+
+    <script>
+        function parseText() {
+            const text = document.getElementById("textInput").value;
+            const output = document.getElementById("output");
+            output.innerHTML = "";
+
+            const functionPattern = /```python\n([\s\S]*?)```/g;
+
+            let match;
+            while ((match = functionPattern.exec(text)) !== null) {
+                const codeBlock = match[1].trim();
+
+                const functionNameMatch = codeBlock.match(/def\s+(\w+)\s*\(/);
+                const functionName = functionNameMatch ? functionNameMatch[1] : "Unknown Function";
+
+                const collapsibleButton = document.createElement("button");
+                collapsibleButton.className = "collapsible";
+                collapsibleButton.innerText = functionName;
+
+                const contentDiv = document.createElement("div");
+                contentDiv.className = "content";
+                contentDiv.innerHTML = `<pre class="language-python"><code class="language-python">${Prism.highlight(codeBlock, Prism.languages.python, 'python')}</code></pre>`;
+
+                collapsibleButton.onclick = function () {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                };
+
+                output.appendChild(collapsibleButton);
+                output.appendChild(contentDiv);
+            }
+        }
+    </script>
+</body>
+</html>

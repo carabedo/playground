@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #drop-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            width: 100%;
+            max-width: 1000px;
+            text-align: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 1000px;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        th {
+            background-color: #f4f4f4;
+            cursor: col-resize;
+        }
+        tr {
+            height: 30px;
+            transition: height 0.2s ease-in-out;
+        }
+        tr.expanded td {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+        }
+        .low-score {
+            background-color: #ffcccc;
+        }
+        th.sortable {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="drop-area">Drag & Drop CSV Here</div>
+    <table id="csv-table"></table>
+    <script>
+        const dropArea = document.getElementById("drop-area");
+        const table = document.getElementById("csv-table");
+        const columns = ["Task ID", "QC Score", "Feedback", "Error Categories", "Project Team Verdict", "Project Team Feedback", "Project Team Proposed Score", "QC Validation", "QC Feedback"];
+
+        dropArea.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            dropArea.style.backgroundColor = "#e0e0e0";
+        });
+
+        dropArea.addEventListener("dragleave", () => {
+            dropArea.style.backgroundColor = "#f9f9f9";
+        });
+
+        dropArea.addEventListener("drop", (event) => {
+            event.preventDefault();
+            dropArea.style.backgroundColor = "#f9f9f9";
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.match(/csv|plain/)) {
+                const reader = new FileReader();
+                reader.onload = (e) => parseCSV(e.target.result);
+                reader.readAsText(file);
+            } else {
+                alert("Please drop a valid CSV file.");
+            }
+        });
+
+        function parseCSV(csv) {
+            Papa.parse(csv, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    table.innerHTML = "";
+                    
+                    const thead = document.createElement("thead");
+                    const headerRow = document.createElement("tr");
+                    columns.forEach(col => {
+                        const th = document.createElement("th");
+                        th.textContent = col;
+                        th.style.width = col === "Task ID" ? "250px" : "150px";
+                        th.classList.add("sortable");
+                        th.addEventListener("click", () => {
+                            if (col === "Task ID") {
+                                copyTaskIDs();
+                            } else {
+                                sortTable(col);
+                            }
+                        });
+                        headerRow.appendChild(th);
+                    });
+                    thead.appendChild(headerRow);
+                    table.appendChild(thead);
+                    
+                    const tbody = document.createElement("tbody");
+                    data.forEach(row => {
+                        const tr = document.createElement("tr");
+                        tr.addEventListener("click", () => {
+                            if (tr.classList.contains("expanded")) {
+                                tr.classList.remove("expanded");
+                            } else {
+                                document.querySelectorAll("tr").forEach(r => r.classList.remove("expanded"));
+                                tr.classList.add("expanded");
+                            }
+                        });
+                        const score = parseFloat(row["QC Score"]);
+                        if (!isNaN(score) && score < 3) {
+                            tr.classList.add("low-score");
+                        }
+                        columns.forEach(col => {
+                            const td = document.createElement("td");
+                            td.textContent = row[col] ? row[col] : "";
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
+                    });
+                    table.appendChild(tbody);
+                }
+            });
+        }
+
+        function sortTable(column) {
+            const tbody = table.querySelector("tbody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            const colIndex = columns.indexOf(column);
+            
+            rows.sort((a, b) => {
+                const aText = a.children[colIndex].textContent;
+                const bText = b.children[colIndex].textContent;
+                return parseFloat(aText) - parseFloat(bText);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function copyTaskIDs() {
+            const taskIDIndex = columns.indexOf("Task ID");
+            const rows = Array.from(table.querySelectorAll("tbody tr"));
+            const taskIDs = rows.map(row => row.children[taskIDIndex].textContent).join("\n");
+            navigator.clipboard.writeText(taskIDs).then(() => {
+                console.log("Task IDs copied to clipboard!");
+            }).catch(err => console.error("Failed to copy Task IDs", err));
+        }
+    </script>
+</body>
+</html>

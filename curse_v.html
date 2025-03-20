@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSV JSON Course Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .upload-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .section {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+    }
+    .section h2 {
+      cursor: pointer;
+      margin: 0;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+    }
+    .content {
+      padding: 10px;
+      display: none;
+    }
+    .item {
+      margin-top: 10px;
+    }
+    .question {
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 1.1em;
+    }
+    .explanation {
+      font-style: italic;
+      color: #444;
+      margin-top: 10px;
+      padding: 5px;
+      background: #eef;
+      border-left: 3px solid #007bff;
+    }
+  </style>
+</head>
+<body>
+  <h1>CSV JSON Course Viewer</h1>
+  
+  <div class="upload-container">
+    <input type="file" id="csvFileInput" accept=".csv">
+    <select id="rowSelector" style="display: none;"></select>
+  </div>
+  
+  <div id="courseContainer"></div>
+  
+  <script>
+    let jsonDataArray = [];
+    let timestamps = [];
+
+    document.getElementById("csvFileInput").addEventListener("change", function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                jsonDataArray = results.data.map(row => {
+                    try {
+                        return JSON.parse(row.update_description);
+                    } catch (error) {
+                        return { error: "Invalid JSON", raw: row.update_description };
+                    }
+                });
+
+                timestamps = results.data.map(row => formatTimestamp(row.ts));
+
+                populateDropdown();
+            }
+        });
+    });
+
+    function populateDropdown() {
+        const dropdown = document.getElementById("rowSelector");
+        dropdown.innerHTML = "";
+        dropdown.style.display = "block";
+
+        jsonDataArray.forEach((_, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = timestamps[index];
+            dropdown.appendChild(option);
+        });
+
+        dropdown.addEventListener("change", function() {
+            displayCourse(jsonDataArray[this.value]);
+        });
+
+        displayCourse(jsonDataArray[0]);
+    }
+
+    function formatTimestamp(ts) {
+        if (!ts) return "Unknown Date";
+        const date = new Date(ts);
+        return date.toLocaleString("en-US", { 
+            year: "numeric", 
+            month: "long", 
+            day: "numeric", 
+            hour: "2-digit", 
+            minute: "2-digit", 
+            second: "2-digit"
+        });
+    }
+
+    function displayCourse(data) {
+        const courseContainer = document.getElementById("courseContainer");
+        courseContainer.innerHTML = "";
+
+        const sections = data.updatedFields?.sections || [];
+
+        sections.forEach(section => {
+            const sectionDiv = document.createElement("div");
+            sectionDiv.classList.add("section");
+
+            const sectionTitle = document.createElement("h2");
+            sectionTitle.innerText = `${section.title} (Estimated Time: ${section.estimatedTime} hours)`;
+            sectionTitle.addEventListener("click", function() {
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === "none" || content.style.display === "") ? "block" : "none";
+            });
+
+            const contentDiv = document.createElement("div");
+            contentDiv.classList.add("content");
+
+            if (!section.courseSectionItems || section.courseSectionItems.length === 0) {
+                contentDiv.innerHTML = "<p>No content available</p>";
+            } else {
+                section.courseSectionItems.forEach(item => {
+                    const itemDiv = document.createElement("div");
+                    itemDiv.classList.add("item");
+
+                    if (item.type === "rich_text") {
+                        itemDiv.innerHTML = item.contents?.body || "<p>No content available</p>";
+                    } 
+                    else if (item.type === "multiple_choice") {
+                        const question = document.createElement("div");
+                        question.classList.add("question");
+                        question.innerHTML = item.contents?.question || "Untitled Question";
+                        itemDiv.appendChild(question);
+
+                        const isMultipleSelect = item.contents?.selectMultiple === true;
+                        const inputType = isMultipleSelect ? "checkbox" : "radio";
+
+                        const optionsContainer = document.createElement("div");
+
+                        item.contents?.choices?.forEach(choice => {
+                            const optionContainer = document.createElement("label");
+                            optionContainer.classList.add("mc-option");
+
+                            const input = document.createElement("input");
+                            input.type = inputType;
+                            input.name = `question-${item.id}`;
+                            input.value = choice.answer;
+                            if (choice.isCorrect) {
+                                input.dataset.correct = "true";
+                            }
+
+                            const optionText = document.createElement("span");
+                            optionText.innerHTML = choice.answer;
+
+                            optionContainer.appendChild(input);
+                            optionContainer.appendChild(optionText);
+                            optionsContainer.appendChild(optionContainer);
+                        });
+
+                        itemDiv.appendChild(optionsContainer);
+
+                        if (item.contents?.explanation) {
+                            const explanation = document.createElement("div");
+                            explanation.classList.add("explanation");
+                            explanation.innerHTML = `<strong>Explanation:</strong> ${item.contents.explanation}`;
+                            itemDiv.appendChild(explanation);
+                        }
+                    } 
+                    else if (item.type === "text_response") {
+                        const question = document.createElement("div");
+                        question.classList.add("question");
+                        question.innerHTML = item.contents?.question || "Untitled Question";
+                        itemDiv.appendChild(question);
+
+                        const minChars = document.createElement("p");
+                        minChars.innerText = `Minimum characters: ${item.contents?.minCharacters || "N/A"}`;
+                        itemDiv.appendChild(minChars);
+                    }
+
+                    contentDiv.appendChild(itemDiv);
+                });
+            }
+
+            contentDiv.style.display = "none";
+            sectionDiv.appendChild(sectionTitle);
+            sectionDiv.appendChild(contentDiv);
+            courseContainer.appendChild(sectionDiv);
+        });
+    }
+  </script>
+
+</body>
+</html>

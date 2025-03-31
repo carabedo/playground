@@ -74,7 +74,7 @@
         <label for="inputIds"><strong>Paste Raw IDs (one per line):</strong></label>
         <textarea id="inputIds" placeholder="Paste one ID per line..." oninput="formatIDs()"></textarea>
 
-        <label for="outputIds"><strong>Formatted IDs:</strong></label>
+        <label for="outputIds"><strong>Formatted Unique IDs:</strong></label>
         <textarea id="outputIds" readonly placeholder="Formatted IDs will appear here..."></textarea>
 
         <button onclick="copyToClipboard()">📋 Copy to Clipboard</button>
@@ -85,8 +85,18 @@
     <script>
         function formatIDs() {
             let input = document.getElementById("inputIds").value;
-            let ids = input.split("\n").map(id => id.trim()).filter(id => id !== "");
-            let formatted = ids.map(id => `'${id}'`).join(",\n");
+            // Split on newlines, trim each line, filter out empty lines
+            let ids = input
+                .split("\n")
+                .map(id => id.trim())
+                .filter(id => id !== "");
+
+            // Use a Set to remove duplicates
+            let uniqueIds = [...new Set(ids)];
+
+            // Format each ID into 'id' form
+            let formatted = uniqueIds.map(id => `'${id}'`).join(",\n");
+
             document.getElementById("outputIds").value = formatted;
         }
 

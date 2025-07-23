@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trajectory Viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f7f9fc;
+      color: #333;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #7f8c8d;
+      font-weight: normal;
+      font-size: 1.2rem;
+    }
+    .step {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      padding: 1rem;
+    }
+    summary {
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .label {
+      font-weight: bold;
+      margin-top: 1rem;
+      color: #2c3e50;
+    }
+    .empty-field {
+      color: #7f8c8d;
+      font-style: italic;
+    }
+    .tabs-container {
+      margin-bottom: 2rem;
+    }
+    .tab-buttons {
+      display: flex;
+      background: #e8f4fd;
+      border-radius: 8px 8px 0 0;
+      border-bottom: 2px solid #3498db;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .tab-button {
+      padding: 1rem 2rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #7f8c8d;
+      transition: all 0.3s ease;
+    }
+    .tab-button.active {
+      color: #3498db;
+      background: #fff;
+      border-radius: 8px 8px 0 0;
+    }
+    .tab-button:hover:not(.active) {
+      color: #2980b9;
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .tab-content {
+      display: none;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .metadata-section {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .metadata-column {
+      flex: 1;
+    }
+    .metadata-column h3 {
+      margin-top: 0;
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 0.5rem;
+    }
+    .metadata-column pre {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 1rem;
+    }
+    .patch-section {
+      margin-bottom: 1rem;
+    }
+    .patch-section h4 {
+      margin: 0 0 0.5rem 0;
+      color: #34495e;
+      font-size: 1rem;
+    }
+    .reload-btn {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 0.8rem 1.5rem;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+      transition: all 0.3s ease;
+    }
+    .reload-btn:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      font-size: 1.2rem;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <h1>Trajectory Viewer</h1>
+  <h2 id="filename-display">Loading...</h2>
+  
+  <div class="loading" id="loading">Loading trajectory data...</div>
+  
+  <div id="metadata-container" class="metadata-section" style="display: none;">
+    <div class="metadata-column">
+      <h3>Problem Statement</h3>
+      <pre id="problem-statement"></pre>
+    </div>
+    <div class="metadata-column">
+      <h3>Pull Request</h3>
+      <div id="pr-link" style="margin-bottom: 1rem; font-size: 0.9rem;"></div>
+      <div class="patch-section">
+        <h4>Patch</h4>
+        <pre id="patch-content"></pre>
+      </div>
+      <div class="patch-section">
+        <h4>Test Patch</h4>
+        <pre id="test-patch-content"></pre>
+      </div>
+    </div>
+  </div>
+  
+  <div id="tabs-container" class="tabs-container" style="display: none;">
+    <div class="tab-buttons">
+      <button class="tab-button active" data-tab="patch">PATCH</button>
+      <button class="tab-button" data-tab="testpatch">TEST PATCH</button>
+    </div>
+    <div id="patch-tab" class="tab-content active">
+      <div id="patch-steps"></div>
+    </div>
+    <div id="testpatch-tab" class="tab-content">
+      <div id="testpatch-steps"></div>
+    </div>
+  </div>
+  
+  <div id="error-container" style="display: none; text-align: center; padding: 2rem; color: #e74c3c;"></div>
+  
+  <button class="reload-btn" id="reload-btn" onclick="loadRandomTrajectory()">Load New Trajectory</button>
+
+  <script>
+    // List of available trajectory files
+    const trajectoryFiles = [
+      '686fd8f0595f584387bea935.json',
+      '6872a866731d61315d919e9b.json',
+      '68767b99ffb2451464587f59.json',
+      '68767b99ffb2451464587f9f.json',
+      '68767d043ae2daa382623925.json'
+    ];
+
+    // Track viewed trajectories and limit (persistent across reloads)
+    const maxTrajectories = 2;
+    let viewedTrajectories = JSON.parse(localStorage.getItem('viewedTrajectories') || '[]');
+
+    function getRandomTrajectoryFile() {
+      // Get available files (not yet viewed)
+      const availableFiles = trajectoryFiles.filter(file => !viewedTrajectories.includes(file));
+      
+      if (availableFiles.length === 0) {
+        return null; // No more files available
+      }
+      
+      const randomIndex = Math.floor(Math.random() * availableFiles.length);
+      return availableFiles[randomIndex];
+    }
+
+    function loadRandomTrajectory() {
+      if (viewedTrajectories.length >= maxTrajectories) {
+        return; // Already viewed maximum number of trajectories
+      }
+      
+      const filename = getRandomTrajectoryFile();
+      if (filename) {
+        viewedTrajectories.push(filename);
+        localStorage.setItem('viewedTrajectories', JSON.stringify(viewedTrajectories));
+        loadTrajectory(filename);
+        updateReloadButton();
+      }
+    }
+
+    function updateReloadButton() {
+      const reloadBtn = document.getElementById('reload-btn');
+      if (viewedTrajectories.length >= maxTrajectories) {
+        reloadBtn.textContent = 'Limit Reached (2/2)';
+        reloadBtn.disabled = true;
+        reloadBtn.style.background = '#95a5a6';
+        reloadBtn.style.cursor = 'not-allowed';
+        reloadBtn.onclick = null;
+      } else {
+        reloadBtn.textContent = `Load New Trajectory (${viewedTrajectories.length}/${maxTrajectories})`;
+        reloadBtn.disabled = false;
+        reloadBtn.style.background = '#3498db';
+        reloadBtn.style.cursor = 'pointer';
+        reloadBtn.onclick = loadRandomTrajectory;
+      }
+    }
+
+
+
+    function loadTrajectory(filename) {
+      const loading = document.getElementById('loading');
+      const metadataContainer = document.getElementById('metadata-container');
+      const tabsContainer = document.getElementById('tabs-container');
+      const errorContainer = document.getElementById('error-container');
+      const filenameDisplay = document.getElementById('filename-display');
+      
+      // Show loading state
+      loading.style.display = 'block';
+      metadataContainer.style.display = 'none';
+      tabsContainer.style.display = 'none';
+      errorContainer.style.display = 'none';
+      
+      // Update filename display
+      const displayName = filename.replace('.json', '');
+      filenameDisplay.textContent = displayName;
+      
+      fetch(`trajs/${filename}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to load ${filename}: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(json => {
+          loading.style.display = 'none';
+          parseAndDisplayTrajectory(json);
+          updateReloadButton();
+        })
+        .catch(error => {
+          loading.style.display = 'none';
+          errorContainer.style.display = 'block';
+          errorContainer.innerHTML = `<h3>Error loading trajectory</h3><p>${error.message}</p><p>Make sure the trajs folder is accessible and contains the JSON files.</p>`;
+          console.error('Error loading trajectory:', error);
+        });
+    }
+
+    function parseAndDisplayTrajectory(json) {
+      const metadataContainer = document.getElementById('metadata-container');
+      const tabsContainer = document.getElementById('tabs-container');
+      const patchStepsContainer = document.getElementById('patch-steps');
+      const testPatchStepsContainer = document.getElementById('testpatch-steps');
+      
+      metadataContainer.style.display = 'flex';
+      tabsContainer.style.display = 'block';
+      
+      patchStepsContainer.innerHTML = '';
+      testPatchStepsContainer.innerHTML = '';
+
+      // Populate metadata section
+      const problemStatement = json.input_metadata?.problem_statement || 'No problem statement found';
+      const patch = json.input_metadata?.patches?.patch || 'No patch found';
+      const testPatch = json.input_metadata?.patches?.test_patch || 'No test patch found';
+      const instanceId = json.input_metadata?.instance_id || '';
+      
+      document.getElementById('problem-statement').textContent = problemStatement;
+      document.getElementById('patch-content').textContent = patch;
+      document.getElementById('test-patch-content').textContent = testPatch;
+      
+      // Extract org, repo, and PR number from instance_id
+      if (instanceId) {
+        const match = instanceId.match(/^(.+?)__(.+?)-(\d+)$/);
+        if (match) {
+          const org = match[1];
+          const repo = match[2];
+          const prNumber = match[3];
+          const githubUrl = `https://github.com/${org}/${repo}/pull/${prNumber}/files`;
+          const displayUrl = `@github.com/${org}/${repo}/pull/${prNumber}`;
+          document.getElementById('pr-link').innerHTML = `<a href="${githubUrl}" target="_blank" style="color: #3498db; text-decoration: none;">${displayUrl}</a>`;
+        }
+      }
+
+      if (!json.annotated_steps || !Array.isArray(json.annotated_steps)) {
+        throw new Error("'annotated_steps' array not found in JSON");
+      }
+
+      // Separate steps by stage
+      const patchSteps = [];
+      const testPatchSteps = [];
+      
+      json.annotated_steps.forEach(step => {
+        const stage = step.metadata?.stage;
+        if (stage === 'TESTING') {
+          testPatchSteps.push(step);
+        } else {
+          patchSteps.push(step);
+        }
+      });
+
+      // Render patch steps (skip first 2)
+      patchSteps.slice(2).forEach((step, idx) => {
+        const stepDiv = document.createElement('details');
+        stepDiv.className = 'step';
+        renderStep(step, idx + 1, stepDiv, 'patch');
+        patchStepsContainer.appendChild(stepDiv);
+      });
+
+      // Render test patch steps
+      testPatchSteps.forEach((step, idx) => {
+        const stepDiv = document.createElement('details');
+        stepDiv.className = 'step';
+        renderStep(step, idx + 1, stepDiv, 'testpatch');
+        testPatchStepsContainer.appendChild(stepDiv);
+      });
+    }
+
+    // Tab switching functionality
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', function() {
+        const targetTab = this.dataset.tab;
+        
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${targetTab}-tab`).classList.add('active');
+      });
+    });
+
+    function renderStep(step, idx, stepDiv, stepType) {
+      // Special case for endInteraction - show "Finished" and answer
+      if (step.actions && Array.isArray(step.actions) && step.actions.length > 0 && 
+          step.actions[0].name === 'endInteraction') {
+        const answer = step.actions[0].input?.answer || '';
+        stepDiv.innerHTML = `
+          <summary>Step ${idx}</summary>
+          <div style="text-align: center; padding: 2rem; font-size: 1.2rem; font-weight: bold; color: #27ae60;">
+            Finished
+          </div>
+          ${answer ? `<pre style="white-space: pre-wrap; background: #f8f9fa; padding: 1rem; border-radius: 5px; overflow-x: auto;"><code>${escapeHtml(answer)}</code></pre>` : ''}
+        `;
+        return;
+      }
+      
+      // Extract thought (can be null or empty)
+      const thought = step.thought || '';
+      
+      // Extract and format input from actions[0] (with safety checks)
+      let input = '';
+      if (step.actions && Array.isArray(step.actions) && step.actions.length > 0) {
+        const action = step.actions[0];
+        
+        // Special case for closeFile
+        if (action.name === 'closeFile' && action.input && action.input.file_path) {
+          input = `close ${action.input.file_path}`;
+        } else if (action.input) {
+          const inputData = action.input;
+          
+          if (typeof inputData === 'string') {
+            input = inputData;
+          } else if (typeof inputData === 'object' && inputData !== null) {
+            // Handle different input object structures
+            if (inputData.cmd) {
+              input = inputData.cmd;
+            } else if (inputData.file_path && inputData.find && inputData.replace) {
+              const startLine = inputData.replace_start_line || '';
+              const endLine = inputData.replace_end_line || '';
+              input = {
+                type: 'edit',
+                file_path: inputData.file_path,
+                start_line: startLine,
+                end_line: endLine,
+                replace_content: inputData.replace
+              };
+            } else if (inputData.file_path) {
+              input = `open ${inputData.file_path}`;
+            } else {
+              input = JSON.stringify(inputData, null, 2);
+            }
+          }
+        }
+      }
+      
+      // Extract stdout from actions[0].output (with safety checks)
+      let stdout = '';
+      if (step.actions && Array.isArray(step.actions) && step.actions.length > 0 && 
+          step.actions[0].output && step.actions[0].output.stdout) {
+        stdout = step.actions[0].output.stdout;
+      }
+
+      // Parse thought into sections and create thought HTML
+      let thoughtHtml = '';
+      const isCloseFileAction = step.actions && Array.isArray(step.actions) && step.actions.length > 0 && step.actions[0].name === 'closeFile';
+      
+      if (step.thought !== null && step.thought !== undefined || isCloseFileAction) {
+        if (isCloseFileAction) {
+          // For closeFile, show thought as-is without breaking into sections
+          thoughtHtml = `
+            <div class="label">THOUGHT:</div>
+            <div class="${thought ? '' : 'empty-field'}" style="margin-left: 1rem; white-space: pre-wrap;">
+              ${thought ? escapeHtml(thought) : '(empty)'}
+            </div>
+          `;
+        } else {
+          // For other actions, break into 4 sections
+          let thoughtSections = { observation: '', actionPlan: '', immediateAction: '', expectation: '' };
+          if (thought) {
+            const sections = thought.split('\n\n');
+            thoughtSections.observation = sections[0] || '';
+            thoughtSections.actionPlan = sections[1] || '';
+            thoughtSections.immediateAction = sections[2] || '';
+            thoughtSections.expectation = sections[3] || '';
+          }
+
+          thoughtHtml = `
+            <div class="label">THOUGHT:</div>
+            <div style="margin-left: 1rem;">
+              <div class="label" style="font-size: 0.9rem; color: #34495e;">Observation:</div>
+              <div class="${thoughtSections.observation ? '' : 'empty-field'}" style="margin-bottom: 0.5rem;">
+                ${thoughtSections.observation ? escapeHtml(thoughtSections.observation) : '(empty)'}
+              </div>
+              <div class="label" style="font-size: 0.9rem; color: #34495e;">Action Plan:</div>
+              <div class="${thoughtSections.actionPlan ? '' : 'empty-field'}" style="margin-bottom: 0.5rem;">
+                ${thoughtSections.actionPlan ? escapeHtml(thoughtSections.actionPlan) : '(empty)'}
+              </div>
+              <div class="label" style="font-size: 0.9rem; color: #34495e;">Immediate Action:</div>
+              <div class="${thoughtSections.immediateAction ? '' : 'empty-field'}" style="margin-bottom: 0.5rem;">
+                ${thoughtSections.immediateAction ? escapeHtml(thoughtSections.immediateAction) : '(empty)'}
+              </div>
+              <div class="label" style="font-size: 0.9rem; color: #34495e;">Expectation:</div>
+              <div class="${thoughtSections.expectation ? '' : 'empty-field'}">
+                ${thoughtSections.expectation ? escapeHtml(thoughtSections.expectation) : '(empty)'}
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      stepDiv.innerHTML = `
+        <summary>Step ${idx}</summary>
+        ${thoughtHtml}
+        <div class="label">INPUT:</div>
+        ${input && typeof input === 'object' && input.type === 'edit' ? 
+          formatEditOperation(input) :
+          `<pre class="${input ? '' : 'empty-field'}">${input ? escapeHtml(input) : '(empty or not available)'}</pre>`
+        }
+        <details>
+          <summary class="label" style="cursor: pointer;">STDOUT:</summary>
+          <pre class="${stdout ? '' : 'empty-field'}" style="margin-top: 0.5rem;">${stdout ? escapeHtml(stdout) : '(empty or not available)'}</pre>
+        </details>
+      `;
+    }
+
+    function formatEditOperation(editInput) {
+      const { file_path, start_line, end_line, replace_content } = editInput;
+      
+      // Create header comments
+      const pathComment = `# Path: ${file_path}`;
+      const rangeComment = start_line && end_line ? `# +${start_line}–${end_line}` : '';
+      
+      // Split content into lines and add line numbers
+      const contentLines = replace_content.split('\n');
+      const startLineNum = parseInt(start_line) || 1;
+      
+      const numberedLines = contentLines.map((line, index) => {
+        const lineNumber = startLineNum + index;
+        return `${lineNumber.toString().padStart(2, ' ')}  ${line}`;
+      }).join('\n');
+      
+      // Combine everything into a single code block
+      const fullContent = [pathComment, rangeComment, '', numberedLines].filter(Boolean).join('\n');
+      
+      return `<pre><code>${escapeHtml(fullContent)}</code></pre>`;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Load a random trajectory when the page loads
+    window.addEventListener('load', function() {
+      updateReloadButton(); // Update button state based on stored data
+      loadRandomTrajectory();
+    });
+  </script>
+</body>
+</html> 

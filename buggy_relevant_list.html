@@ -84,7 +84,7 @@
       }
       if (cleaned.match(/,,+/)) {
         cleaned = cleaned.replace(/,,+/g, ',');
-        feedback.push("Removed empty entries (double commas).");
+        feedback.push("Empty entries detected (double commas). Please remove them before submitting the task this usually happens when a test is deleted but the separating comma is left behind. Search for `,,` and fix it.");
       }
       if (cleaned.match(/\[\s*,/)) {
         cleaned = cleaned.replace(/\[\s*,/g, '[');

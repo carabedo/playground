@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>File & F2P Formatter</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    textarea {
+      width: 100%;
+      height: 140px;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    button {
+      display: block;
+      margin: 12px auto;
+      padding: 8px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    h3 { margin-top: 24px; }
+    #feedback {
+      border-left: 4px solid #ccc;
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-size: 14px;
+      display: none;
+    }
+    .error { border-color: #dc3545; color: #721c24; background: #f8d7da; display: block; }
+    .success { border-color: #28a745; color: #155724; background: #d4edda; display: block; }
+  </style>
+</head>
+<body>
+  <h1>File & F2P Formatter</h1>
+
+  <label><b>Diff Block (triple-backticked):</b></label>
+  <textarea id="diffInput" placeholder="Paste text with ```file paths``` here..."></textarea>
+
+  <label><b>F2P List (JSON array):</b></label>
+  <textarea id="f2pInput" placeholder='["/path/to/test1","/path/to/test2"]'></textarea>
+
+  <button onclick="processInputs()">Format</button>
+
+  <div id="feedback"></div>
+
+  <h3>🗂️ Sorted File Paths:</h3>
+  <pre id="fileOutput"></pre>
+
+<h3>🧪 Sorted F2P (one per line):</h3>
+<pre id="f2pOutput" style="white-space: pre; overflow-x: auto; overflow-y: auto; max-height: 400px;"></pre>
+
+
+  <script>
+    function showFeedback(message, type = "success") {
+      const fb = document.getElementById("feedback");
+      fb.textContent = message;
+      fb.className = type;
+    }
+
+    function extractFilePaths(text) {
+      const regex = /```([^`]+)```/g;
+      let matches = [];
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const lines = match[1].trim().split("\n");
+        if (lines.length > 0 && lines[0].trim()) {
+          // Take first non-empty line (should be path)
+          const filePath = lines[0].trim();
+          if (!filePath.match(/insertions|deletions/i)) {
+            matches.push(filePath);
+          }
+        }
+      }
+      return matches;
+    }
+
+    function safeParseF2P(str) {
+      str = str.trim();
+      if (!str) return [];
+      try {
+        const arr = JSON.parse(str);
+        if (Array.isArray(arr)) return arr;
+        throw new Error("Not an array");
+      } catch {
+        throw new Error("Invalid JSON array in F2P input");
+      }
+    }
+
+    function processInputs() {
+      const diffText = document.getElementById("diffInput").value;
+      const f2pText = document.getElementById("f2pInput").value;
+      const fileOut = document.getElementById("fileOutput");
+      const f2pOut = document.getElementById("f2pOutput");
+      fileOut.textContent = "";
+      f2pOut.textContent = "";
+
+      try {
+        const filePaths = extractFilePaths(diffText)
+          .filter(p => !!p)
+          .sort((a, b) => a.localeCompare(b));
+
+        const f2pList = safeParseF2P(f2pText)
+          .filter(x => typeof x === "string")
+          .sort((a, b) => a.localeCompare(b));
+
+        fileOut.textContent = filePaths.join("\n");
+        f2pOut.textContent = f2pList.join("\n");
+
+        showFeedback(`✅ Parsed ${filePaths.length} files and ${f2pList.length} F2P entries successfully.`, "success");
+      } catch (e) {
+        showFeedback(`❌ ${e.message}`, "error");
+      }
+    }
+  </script>
+</body>
+</html>

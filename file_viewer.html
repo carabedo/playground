@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Remote File Viewer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+pre {
+  background-color: #1e1e1e !important;
+  color: #dcdcdc !important;
+  padding: 1em !important;
+  border-radius: 0.5em !important;
+  overflow-x: auto !important;
+  font-family: monospace !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  font-size: 0.75rem !important; /* ~12px */
+  line-height: 1.1rem !important;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold mb-4">📂 Remote File Viewer</h1>
+    <p class="mb-2 text-gray-600">Enter one or more file URLs (separated by spaces, tabs, or newlines):</p>
+    <textarea id="urls" class="w-full border rounded-lg p-2 h-32 font-mono text-sm" placeholder="Paste URLs here..."></textarea>
+    <button id="fetchBtn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Fetch Files</button>
+    <div id="output" class="mt-6 space-y-4"></div>
+  </div>
+
+<script>
+async function fetchAndDisplay(url) {
+  const outputDiv = document.getElementById("output");
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = url.split('/').pop();
+  details.appendChild(summary);
+
+  const pre = document.createElement("pre");
+  pre.classList.add("text-xs"); // 🔹 enforce small font size
+  pre.textContent = "Loading...";
+  details.appendChild(pre);
+  outputDiv.appendChild(details);
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    if (url.endsWith(".json")) {
+      try {
+        const jsonObj = JSON.parse(text);
+        pre.textContent = JSON.stringify(jsonObj, null, 2);
+      } catch {
+        pre.textContent = text; // fallback if invalid JSON
+      }
+    } else {
+      pre.textContent = text;
+    }
+  } catch (err) {
+    pre.textContent = `⚠️ Failed to fetch: ${err.message}`;
+  }
+}
+
+document.getElementById("fetchBtn").addEventListener("click", () => {
+  const urlsRaw = document.getElementById("urls").value.trim();
+  const urls = urlsRaw.split(/\s+/).filter(Boolean);
+  const output = document.getElementById("output");
+  output.innerHTML = "";
+  urls.forEach(url => fetchAndDisplay(url));
+});
+</script>
+</body>
+</html>

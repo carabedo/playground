@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>File & F2P Formatter</title>
+  <title>Test Patch & F2P Formatter</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -51,10 +51,11 @@
   </style>
 </head>
 <body>
-  <h1>File & F2P Formatter</h1>
+  <h1>Test Patch & F2P Formatter</h1>
+  <h2>Use this tool to detect which test are not present in the F2P, evaluate why (skipped, missing, pass, etc)</h2>
 
-  <label><b>Diff Block (triple-backticked):</b></label>
-  <textarea id="diffInput" placeholder="Paste text with ```file paths``` here..."></textarea>
+  <label><b>Test Patch summary (triple-backticked):</b></label>
+  <textarea id="diffInput" placeholder="Paste the test_patch_summary with ```file paths``` here..."></textarea>
 
   <label><b>F2P List (JSON array):</b></label>
   <textarea id="f2pInput" placeholder='["/path/to/test1","/path/to/test2"]'></textarea>
@@ -63,7 +64,7 @@
 
   <div id="feedback"></div>
 
-  <h3>🗂️ Sorted File Paths:</h3>
+  <h3>🗂️ Sorted File Paths in Test Patch:</h3>
   <pre id="fileOutput"></pre>
 
 <h3>🧪 Sorted F2P (one per line):</h3>

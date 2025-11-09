@@ -6,14 +6,17 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 40px auto;
       padding: 20px;
     }
-    h1 { text-align: center; }
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
     textarea {
       width: 100%;
-      height: 100px;
+      height: 120px;
       font-family: monospace;
       font-size: 14px;
       padding: 8px;
@@ -27,16 +30,26 @@
       cursor: pointer;
     }
     pre {
-      background: #f4f4f4;
+      background: #f8f8f8;
       padding: 10px;
       border-radius: 6px;
       font-size: 14px;
       overflow-x: auto;
     }
+    #feedback {
+      border-left: 4px solid #999;
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .success { border-color: #28a745; color: #155724; background: #d4edda; }
+    .warning { border-color: #ffc107; color: #856404; background: #fff3cd; }
+    .error { border-color: #dc3545; color: #721c24; background: #f8d7da; }
   </style>
 </head>
 <body>
   <h1>Relevant F2P Extractor</h1>
+
   <label><b>F2P List (full):</b></label>
   <textarea id="f2pInput"></textarea>
 
@@ -45,35 +58,91 @@
 
   <button onclick="computeRelevant()">Get Relevant</button>
 
+  <div id="feedback"></div>
+
   <h3>Relevant:</h3>
   <pre id="output"></pre>
 
   <script>
-    function safeParseJSON(str) {
-      try {
-        // Normalize input for common copy/paste issues
-        str = str.trim()
-          .replace(/'/g, '"')         // convert single to double quotes
-          .replace(/,\s*]/g, ']')     // remove trailing commas
-          .replace(/,\s*}/g, '}');    // remove trailing commas in objects
-        return JSON.parse(str);
-      } catch {
-        // Try to extract something like ["a","b","c"] from messy text
-        const match = str.match(/\[.*\]/s);
-        if (match) return JSON.parse(match[0]);
-        throw new Error("Invalid JSON");
+    function safeParseJSON(str, label) {
+      let feedback = [];
+      let cleaned = str.trim();
+
+      if (!cleaned) throw new Error(`${label} input is empty.`);
+
+      const original = cleaned;
+
+      // Common fixes
+      if (/''|""/.test(cleaned)) feedback.push("Empty strings detected; ignored safely.");
+      if (cleaned.includes("',") || cleaned.includes("['")) {
+        cleaned = cleaned.replace(/'/g, '"');
+        feedback.push("Converted single quotes to double quotes.");
       }
+      if (cleaned.match(/,\s*]/)) {
+        cleaned = cleaned.replace(/,\s*]/g, ']');
+        feedback.push("Removed trailing commas before closing bracket.");
+      }
+      if (cleaned.match(/,,+/)) {
+        cleaned = cleaned.replace(/,,+/g, ',');
+        feedback.push("Removed empty entries (double commas).");
+      }
+      if (cleaned.match(/\[\s*,/)) {
+        cleaned = cleaned.replace(/\[\s*,/g, '[');
+        feedback.push("Removed leading commas in array.");
+      }
+
+      try {
+        return { data: JSON.parse(cleaned), feedback };
+      } catch (e) {
+        feedback.push("JSON parse failed — trying fallback pattern extraction.");
+
+        const match = cleaned.match(/\[.*\]/s);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0]);
+            feedback.push("Recovered valid array via fallback extraction.");
+            return { data: parsed, feedback };
+          } catch {
+            feedback.push("Fallback extraction also failed.");
+          }
+        }
+
+        throw new Error(`${label} could not be parsed as JSON.`);
+      }
+    }
+
+    function showFeedback(msgs, type = "success") {
+      const box = document.getElementById("feedback");
+      if (!msgs.length) {
+        box.textContent = "";
+        box.className = "";
+        return;
+      }
+      box.innerHTML = msgs.map(m => `• ${m}`).join("<br>");
+      box.className = type;
     }
 
     function computeRelevant() {
       const output = document.getElementById("output");
+      output.textContent = "";
+      let feedbackMessages = [];
+
       try {
-        const f2p = safeParseJSON(document.getElementById("f2pInput").value);
-        const irrelevant = safeParseJSON(document.getElementById("irrelevantInput").value);
-        const relevant = f2p.filter(x => !irrelevant.includes(x));
+        const f2pParsed = safeParseJSON(document.getElementById("f2pInput").value, "F2P");
+        const irrParsed = safeParseJSON(document.getElementById("irrelevantInput").value, "Irrelevant");
+
+        feedbackMessages = [...f2pParsed.feedback, ...irrParsed.feedback];
+
+        const f2p = f2pParsed.data;
+        const irrelevant = irrParsed.data;
+        const relevant = f2p.filter(x => typeof x === "string" && !irrelevant.includes(x));
+
         output.textContent = JSON.stringify(relevant, null, 2);
+        feedbackMessages.push(`✅ Successfully computed ${relevant.length} relevant items.`);
+        showFeedback(feedbackMessages, "success");
       } catch (e) {
-        output.textContent = "❌ Invalid input. Make sure both boxes contain JSON arrays like: [\"a\",\"b\"].";
+        feedbackMessages.push(`❌ ${e.message}`);
+        showFeedback(feedbackMessages, "error");
       }
     }
   </script>
